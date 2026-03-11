@@ -179,6 +179,31 @@ int afe_init(void)
 			status = SYS_STATUS_AFE_MASK0_FAILED;
 		}
 	}
+
+	if (status == 0) {
+		/* MOD accumulate over samples */
+		config = 0;
+
+		config |= BITM_EP_CFG_EGY_PWR_EN;       /* EGY_PWR_EN = 1  (bit 0 = 1) */
+		config |= BITM_EP_CFG_EGY_LD_ACCUM;     /* EGY_LD_ACCUM = 1 (bit 4 = 1) */
+		/* EGY_TMR_MODE = 0 (samples mode) */
+		/* RD_RST_EN = 0 (no auto-reset) */
+
+		status = afe_write_16bit_reg(REG_EP_CFG, (uint16_t *)&config);
+		if (status != 0) {
+			status = SYS_STATUS_AFE_EP_CFG_FAILED ;
+		}
+	}
+
+	if (status == 0) {
+		/* Period 500ms: (3999+1)/8000 = 0.5 sec */
+		config = 3999;
+		status = afe_write_16bit_reg(REG_EGY_TIME, (uint16_t *)&config);
+		if (status != 0) {
+			status = SYS_STATUS_AFE_EGY_TIME_FAILED;
+		}
+	}
+
 	if (status == 0) {
 		config = 1;
 		status = afe_write_16bit_reg(REG_RUN, (uint16_t *)&config);
