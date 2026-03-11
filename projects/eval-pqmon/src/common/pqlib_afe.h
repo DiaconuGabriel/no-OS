@@ -57,5 +57,13 @@
  *         1 on Failure
  */
 int get_afe_input();
+int read_and_process_energy(uint16_t hi_reg, uint16_t lo_reg,
+			    ENERGY_VALUES *energy);
+int read_phase_energy(PHASE_ENERGY *phase,
+		      uint16_t active_hi_reg, uint16_t active_lo_reg,
+		      uint16_t reactive_hi_reg, uint16_t reactive_lo_reg,
+		      uint16_t apparent_hi_reg, uint16_t apparent_lo_reg);
+int read_all_energy(ALL_PHASES_ENERGY *allEnergy);
+
 
 #endif /* __PQLIB_AFE_H__ */

@@ -76,6 +76,10 @@ int get_afe_input()
 		}
 	}
 
+	if ((status == 0) && (pOneCycle->STATUS0 & BITM_STATUS0_EGYRDY)) {
+		status = read_all_energy(&pqlibExample.allEnergy);
+	}
+	
 	if ((status == 0) && (pOneCycle->STATUS0 & BITM_STATUS0_COH_PAGE_RDY)) {
 		status = afe_read_waveform(
 				 (uint16_t *) & (pqlibExample.inputWaveform.waveform),
@@ -98,6 +102,102 @@ int get_afe_input()
 			p1012Cycle->sequenceNumber++;
 		}
 	}
+
+	return status;
+}
+
+/**
+ * @brief Read and process one energy type (HI+LO) from registers
+ * @param hi_reg Register address for HI (MSBs)
+ * @param lo_reg Register address for LO (LSBs)
+ * @param energy Pointer to ENERGY_VALUES structure
+ * @return Status code
+ */
+int read_and_process_energy(uint16_t hi_reg, uint16_t lo_reg,
+			    ENERGY_VALUES *energy)
+{
+	int status = 0;
+
+	/*Read HI register*/
+	status = afe_read_32bit_buff(hi_reg, 1, (uint32_t*)&energy->regHi);
+	if (status != 0) return status;
+
+	/*Read LO register*/
+	status = afe_read_32bit_buff(lo_reg, 1, (uint32_t*)&energy->regLo);
+	if (status != 0) return status;
+
+	/*Combine HI + LO into 45-bit value*/
+	energy->currentPeriodRaw = ((int64_t)energy->regHi << 13) | energy->regLo;
+
+	/*Accumulate total*/
+	energy->totalRaw += energy->currentPeriodRaw;
+
+	/*Convert to Wh*/
+	energy->totalWh = energy->totalRaw *
+				     ENERGY_CONVERSION_CONSTANT;
+
+	return status;
+}
+
+/**
+ * @brief Read all energy types (P, Q, S) for one phase
+ * @param phase Pointer to CHANNEL_ENERGY structure
+ * @return Status code
+ */
+int read_phase_energy(PHASE_ENERGY *phase,
+		      uint16_t active_hi_reg, uint16_t active_lo_reg,
+		      uint16_t reactive_hi_reg, uint16_t reactive_lo_reg,
+		      uint16_t apparent_hi_reg, uint16_t apparent_lo_reg)
+{
+	int status = 0;
+
+	status = read_and_process_energy(
+			 active_hi_reg,
+			 active_lo_reg,
+			 &phase->activeEnergy); /*Active Energy (P)*/
+	if (status != 0) return status;
+
+	status = read_and_process_energy(
+			 reactive_hi_reg,
+			 reactive_lo_reg,
+			 &phase->reactiveEnergy); /*Reactive Energy (Q)*/
+	if (status != 0) return status;
+
+	status = read_and_process_energy(
+			 apparent_hi_reg,
+			 apparent_lo_reg,
+			 &phase->apparentEnergy); /*Apparent Energy (S)*/
+	if (status != 0) return status;
+
+	return status;
+}
+
+/**
+ * @brief Read all energy data for all 3 phases
+ * @param allEnergy Pointer to ALL_CHANNELS_ENERGY structure
+ * @return Status code
+ */
+int read_all_energy(ALL_PHASES_ENERGY *allEnergy)
+{
+	int status = 0;
+
+	status = read_phase_energy(&allEnergy->phaseA,
+				   REG_AWATTHR_HI, REG_AWATTHR_LO,
+				   REG_AVARHR_HI, REG_AVARHR_LO,
+				   REG_AVAHR_HI, REG_AVAHR_LO);  /* Phase A */
+	if (status != 0) return status;
+
+	status = read_phase_energy(&allEnergy->phaseB,
+				   REG_BWATTHR_HI, REG_BWATTHR_LO,
+				   REG_BVARHR_HI, REG_BVARHR_LO,
+				   REG_BVAHR_HI, REG_BVAHR_LO);  /* Phase B */
+	if (status != 0) return status;
+
+	status = read_phase_energy(&allEnergy->phaseC,
+				   REG_CWATTHR_HI, REG_CWATTHR_LO,
+				   REG_CVARHR_HI, REG_CVARHR_LO,
+				   REG_CVAHR_HI, REG_CVAHR_LO);  /* Phase C */
+	if (status != 0) return status;
 
 	return status;
 }
