@@ -62,6 +62,38 @@ typedef enum {
 } PQLIB_STATE;
 
 /**
+ * @brief Energy accumulation values for one type of energy
+ *
+ */
+typedef struct {
+	int64_t totalRaw;            /* total raw LSB */
+	int64_t currentPeriodRaw;    /* raw for last period */
+	int32_t regHi;               /* xWATTHR_HI */
+	uint32_t regLo;              /* xWATTHR_LO */
+	double totalWh;              /* total converted in Wh */
+} ENERGY_VALUES;
+
+/**
+ * @brief All energy types for one phase (Active P, Reactive Q, Apparent S)
+ *
+ */
+typedef struct {
+	ENERGY_VALUES activeEnergy;
+	ENERGY_VALUES reactiveEnergy;
+	ENERGY_VALUES apparentEnergy;
+} PHASE_ENERGY;
+
+/**
+ * @brief Complete energy data for all 3 phases
+ *
+ */
+typedef struct {
+	PHASE_ENERGY phaseA;
+	PHASE_ENERGY phaseB;
+	PHASE_ENERGY phaseC;
+} ALL_PHASES_ENERGY;
+
+/**
  * @brief VCONSEL H/W config selection
  *
  */
@@ -154,6 +186,7 @@ typedef struct {
 	ADI_PQLIB_PHASE_MAP channelMap;
 	PQLIB_STATE state;
 	struct no_os_circular_buffer *no_os_cb_desc;
+	ALL_PHASES_ENERGY allEnergy;
 
 } PQLIB_EXAMPLE; // pqlib example struct
 
