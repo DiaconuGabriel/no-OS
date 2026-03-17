@@ -136,6 +136,9 @@
 #define CHAN_EVENT_DELTA_U_SS           20
 #define CHAN_VOLTAGE_MAGNITUDE1012      21
 #define CHAN_VOLTAGE_MAX_MAGNITUDE      22
+#define CHAN_ACTIVE_ENERGY              23
+#define CHAN_REACTIVE_ENERGY            24
+#define CHAN_APPARENT_ENERGY            25
 
 #define RESAMPLED_WAVEFORM_FULL_SCALE   18196
 
