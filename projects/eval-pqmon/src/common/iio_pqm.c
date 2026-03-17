@@ -48,6 +48,13 @@
     .attributes = current_pqm_attributes, .ch_out = false                      \
   }
 
+#define PQM_ENERGY_CHANNEL(_idx, _scan_idx, _name)                            \
+  {                                                                            \
+    .name = _name, .ch_type = IIO_ENERGY, .channel = _idx,                    \
+    .scan_index = _scan_idx, .indexed = true, .scan_type = &pqm_scan_type,     \
+    .attributes = energy_pqm_attributes, .ch_out = false                      \
+  }
+
 #define PQM_EVENT_CHANNEL(_idx, _scan_idx, _name, _attrb_def)			\
 {										\
     .name = _name, .ch_type = IIO_COUNT, .channel = _idx,                       \
@@ -886,6 +893,34 @@ int read_ch_attr(void *device, char *buf, uint32_t len,
 				       buf, len, "%" PRIu32 "",
 				       desc->pqm_ch_attr[channel->ch_num + VOLTAGE_CH_NUMBER][attr_id]);
 		}
+
+	case IIO_ENERGY: {
+		PHASE_ENERGY *phase;
+		switch (channel->ch_num) {
+		case 0:
+			phase = &pqlibExample.allEnergy.phaseA;
+			break;
+		case 1:
+			phase = &pqlibExample.allEnergy.phaseB;
+			break;
+		case 2:
+			phase = &pqlibExample.allEnergy.phaseC;
+			break;
+		default:
+			return -EINVAL;
+		}
+		switch (attr_id) {
+		case CHAN_ACTIVE_ENERGY:
+			return snprintf(buf, len, "%.2f", phase->activeEnergy.totalWh);
+		case CHAN_REACTIVE_ENERGY:
+			return snprintf(buf, len, "%.2f", phase->reactiveEnergy.totalWh);
+		case CHAN_APPARENT_ENERGY:
+			return snprintf(buf, len, "%.2f", phase->apparentEnergy.totalWh);
+		default:
+			return -EINVAL;
+		}
+	}
+
 	case IIO_COUNT:
 		switch (channel->ch_num) {
 		case 0: // Dips
@@ -1136,6 +1171,25 @@ struct iio_attribute current_pqm_attributes[] = {
 
 	END_ATTRIBUTES_ARRAY,
 }; // current channel attributes
+
+struct iio_attribute energy_pqm_attributes[] = {
+	{
+		.name = "active_energy",
+		.show = read_ch_attr,
+		.priv = CHAN_ACTIVE_ENERGY,
+	},
+	{
+		.name = "reactive_energy",
+		.show = read_ch_attr,
+		.priv = CHAN_REACTIVE_ENERGY,
+	},
+	{
+		.name = "apparent_energy",
+		.show = read_ch_attr,
+		.priv = CHAN_APPARENT_ENERGY,
+	},
+	END_ATTRIBUTES_ARRAY,
+};
 
 struct iio_attribute global_pqm_attributes[] = {
 #if ADI_PQLIB_CFG_DISABLE_SYMM_COMP == 0
@@ -1539,15 +1593,18 @@ struct scan_type pqm_scan_type = {.sign = 's',
 static struct iio_channel iio_pqm_channels[] = {
 	PQM_CURRENT_CHANNEL(0, 1, "ia"),
 	PQM_VOLTAGE_CHANNEL(0, 2, "ua"),
-	PQM_CURRENT_CHANNEL(1, 3, "ib"),
-	PQM_VOLTAGE_CHANNEL(1, 4, "ub"),
-	PQM_CURRENT_CHANNEL(2, 5, "ic"),
-	PQM_VOLTAGE_CHANNEL(2, 6, "uc"),
-	PQM_CURRENT_CHANNEL(3, 7, "in"),
-	PQM_EVENT_CHANNEL(0, 8, "dips", event_pqm_dips_attribute),
-	PQM_EVENT_CHANNEL(1, 9, "swells", event_pqm_swell_attribute),
-	PQM_EVENT_CHANNEL(2, 10, "rvc", event_pqm_rvc_attribute),
-	PQM_EVENT_CHANNEL(3, 11, "intrpt", event_pqm_intrpr_attribute),
+	PQM_ENERGY_CHANNEL(0, 3, "ea"),
+	PQM_CURRENT_CHANNEL(1, 4, "ib"),
+	PQM_VOLTAGE_CHANNEL(1, 5, "ub"),
+	PQM_ENERGY_CHANNEL(1, 6, "eb"),
+	PQM_CURRENT_CHANNEL(2, 7, "ic"),
+	PQM_VOLTAGE_CHANNEL(2, 8, "uc"),
+	PQM_ENERGY_CHANNEL(2, 9, "ec"),
+	PQM_CURRENT_CHANNEL(3, 10, "in"),
+	PQM_EVENT_CHANNEL(0, 11, "dips", event_pqm_dips_attribute),
+	PQM_EVENT_CHANNEL(1, 12, "swells", event_pqm_swell_attribute),
+	PQM_EVENT_CHANNEL(2, 13, "rvc", event_pqm_rvc_attribute),
+	PQM_EVENT_CHANNEL(3, 14, "intrpt", event_pqm_intrpr_attribute),
 }; // channel definitions for device
 
 struct iio_device pqm_iio_descriptor = {
