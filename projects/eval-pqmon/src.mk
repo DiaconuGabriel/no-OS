@@ -39,6 +39,17 @@ INCS += $(INCLUDE)/no_os_delay.h     				\
 SRCS +=	$(NO-OS)/drivers/display/nhd_c12832a1z/nhd_c12832a1z.c
 INCS +=	$(NO-OS)/drivers/display/nhd_c12832a1z/nhd_c12832a1z.h
 
+INCS +=	$(NO-OS)/drivers/rtc/max31343/max31343.h
+INCS +=	$(NO-OS)/drivers/gnss-gps/nmea_ubx/nmea_ubx.h
+INCS += $(DRIVERS)/platform/generic/nmea_ubx_gnss.h
+INCS += $(INCLUDE)/no_os_gnss.h
+
+ifeq ($(TIME_SYNC), y)
+SRCS +=	$(NO-OS)/drivers/rtc/max31343/max31343.c
+SRCS += $(NO-OS)/drivers/gnss-gps/nmea_ubx/nmea_ubx.c
+SRCS += $(DRIVERS)/platform/generic/nmea_ubx_gnss.c
+SRCS += $(DRIVERS)/api/no_os_gnss.c
+endif
 
 # Platforms
 INCS += $(PROJECT)/src/platform/platform_includes.h

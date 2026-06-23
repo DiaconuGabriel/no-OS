@@ -35,9 +35,16 @@
 #include "iio_pqm.h"
 #include "afe_calibration.h"
 #include "flash_storage.h"
+#ifdef PQM_TIME_SYNC
+#include "gnss_utils.h"
+#include "pps_utils.h"
+#include "interrupt.h"
+#include "max31343.h"
+#endif
 
 PQLIB_EXAMPLE pqlibExample;
-extern volatile uint8_t newSyncTimeAvailable = 0;
+volatile uint8_t newSyncTimeAvailable = 0;
+volatile int64_t time_ms = 0;
 extern volatile bool configChanged;
 
 int pqm_measurement_init(void)
@@ -114,6 +121,12 @@ int pqm_start_measurement(bool waitingForSync)
 
 int pqm_one_cycle(void)
 {
+#ifdef PQM_TIME_SYNC
+	pqm_update_timestamp();
+
+	pps_run_state_machine();
+#endif
+
 	/* Check for calibration request first */
 	if (pqlibExample.calibrationRequested || calibration_is_active()) {
 		if (pqlibExample.state != PQLIB_STATE_CALIBRATING) {
@@ -544,7 +557,11 @@ void set_default_config(EXAMPLE_CONFIG *pConfig)
 	pConfig->phaseMap.phaseIN = ADI_PQLIB_PHASE_IN;
 	pConfig->enableRTCSync = true;
 	pConfig->enableIconsel = false;
+#ifdef PQM_TIME_SYNC
+	pConfig->useExternalTimestamp = true;
+#else
 	pConfig->useExternalTimestamp = false;
+#endif
 	pConfig->vconsel = VCONSEL_4W_WYE;
 	pConfig->calNominalCurrent = 10.0f;     /* 10 Arms for gain cal */
 	pConfig->calNominalVoltage = 230.0f;    /* 230 Vrms for gain cal */
@@ -558,10 +575,45 @@ int SyncLibTime(PQLIB_EXAMPLE *pExample, bool checkRtcTime)
 {
 	ADI_PQLIB_RESULT pqlibStatus = ADI_PQLIB_RESULT_SUCCESS;
 	ADI_PQLIB_HANDLE hDevice = pqlibExample.hDevice;
-	const int16_t uncertainty = 20;
 	bool applyImmediately = true;
 	int status = 0;
 	int64_t systemTime;
+#ifdef PQM_TIME_SYNC
+	const int16_t uncertainty = 1;
+	uint32_t timer_now;
+	int32_t elapsed_ticks;
+	int64_t time_for_lib;
+	int64_t drift;
+
+	if (newSyncTimeAvailable) {
+		newSyncTimeAvailable = 0;
+
+		/* Wall time = epoch + ticks since the active PPS edge (GNSS, or RTC
+		 * during holdover). Real-time read, not the ISR capture. */
+		timer_now = timer_read_count();
+		elapsed_ticks = (int32_t)(timer_now - pps_get_sync_edge());
+		if (elapsed_ticks < 0)
+			elapsed_ticks += pps_real_freq_hz;
+		time_for_lib = time_ms +
+			       elapsed_ticks * 1000LL / pps_real_freq_hz;
+
+		if (checkRtcTime) {
+			adi_pqlib_GetTime(hDevice, &systemTime);
+
+			drift = time_for_lib - systemTime;
+			if (drift < 0)
+				drift = -drift;
+
+			pqlibStatus = adi_pqlib_SetTime(hDevice, time_for_lib,
+							uncertainty, applyImmediately);
+		} else {
+			pqlibStatus = adi_pqlib_SetTime(hDevice, time_for_lib,
+							uncertainty, applyImmediately);
+		}
+		status = process_pqlib_error(&pqlibExample, pqlibStatus);
+	}
+#else
+	const int16_t uncertainty = 20;
 	int64_t rtcTime = 0;
 
 	if (newSyncTimeAvailable) {
@@ -578,6 +630,7 @@ int SyncLibTime(PQLIB_EXAMPLE *pExample, bool checkRtcTime)
 		}
 		status = process_pqlib_error(&pqlibExample, pqlibStatus);
 	}
+#endif
 
 	return status;
 }

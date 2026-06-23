@@ -67,6 +67,7 @@
 #define SPI_OPS &max_spi_ops
 
 #define I2C_EXTRA &vddioh_i2c_extra
+#define I2C_OPS &max_i2c_ops
 #define SPI_PQM_DEVICE_ID 1
 #define SPI_PQM_BAUDRATE 6000000
 #define SPI_PQM_EXTRA &spi_extra_ip
@@ -93,6 +94,27 @@
 #define INTR_GPIO_EXTRA &max_reset_gpio_extra_ip
 #define INTR_GPIO_IRQ_ID 0
 #define INTR_OPS &max_gpio_irq_ops
+
+#define GNSS_UART_DEVICE_ID         2
+#define GNSS_UART_EXTRA            &uart_stdio_extra_ip
+#define GNSS_RESET_PORT             2
+#define GNSS_RESET_PIN              7
+#define GNSS_PPS_IRQ_PORT           0
+#define GNSS_PPS_IRQ_PIN            6
+#define NVIC_GNSS_PPS_IRQ           GPIO0_IRQn
+
+#define RTC_PPS_IRQ_PORT            2
+#define RTC_PPS_IRQ_PIN             13
+#define NVIC_RTC_PPS_IRQ            GPIO2_IRQn
+
+#define RTC_I2C_DEVICE_ID           1
+#define RTC_I2C_BAUDRATE            400000
+
+#define PPS_TIMER_ID                1
+#define PPS_TIMER_FREQ_HZ           60000000UL
+
+#define RTC_SYNC_TIMER_REGS         MXC_TMR2
+#define RTC_SYNC_TIMER_IRQ          TMR2_IRQn
 
 extern struct max_i2c_init_param vddioh_i2c_extra;
 extern struct max_spi_init_param spi_extra_ip;

@@ -266,6 +266,8 @@ int wait_for_zero_crossing(PQLIB_EXAMPLE *pExample,
 void SyncToDip(PQLIB_EXAMPLE *pExample, ADI_PQLIB_RESULT pqlibStatus);
 
 extern PQLIB_EXAMPLE pqlibExample;
+extern volatile uint8_t newSyncTimeAvailable;
+extern volatile int64_t time_ms;
 
 /**
  * @brief Initializes Power Quality Measurement.

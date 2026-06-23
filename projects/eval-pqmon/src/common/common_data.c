@@ -248,15 +248,15 @@ struct pqm_init_para pqm_ip = {
 	}
 }; // pqm init param
 
-struct max_i2c_init_param i2c_extra = {.vssel = MXC_GPIO_VSSEL_VDDIOH}; // I2C
-
-struct no_os_i2c_init_param i2c_ip = {
-	.device_id = 1,
-	.max_speed_hz = 400000,
-	.slave_address = 0x51,
-	.platform_ops = &max_i2c_ops,
-	.extra = &i2c_extra
-}; // I2C Initialization Parameters
+#ifdef PQM_TIME_SYNC
+struct no_os_i2c_init_param rtc_i2c_ip = {
+	.device_id = RTC_I2C_DEVICE_ID,
+	.max_speed_hz = RTC_I2C_BAUDRATE,
+	.slave_address = MAX31343_I2C_ADDRESS,
+	.platform_ops = I2C_OPS,
+	.extra = I2C_EXTRA
+}; // I2C init param for MAX31343 RTC
+#endif
 
 struct no_os_uart_init_param uart_ip_stdio = {
 	.device_id = 0,
@@ -309,3 +309,77 @@ struct no_os_callback_desc afe0_callback_desc = {
 	.ctx = NULL,
 	.handle = NULL,
 };
+
+#ifdef PQM_TIME_SYNC
+struct no_os_irq_init_param gnss_nvic_ip = {
+	.platform_ops = &max_irq_ops
+};
+
+struct no_os_irq_init_param rtc_nvic_ip = {
+	.platform_ops = &max_irq_ops
+};
+
+struct no_os_uart_init_param uart_gnss_ip = {
+	.device_id = GNSS_UART_DEVICE_ID,
+	.baud_rate = GNSS_UART_BAUDRATE,
+	.size = NO_OS_UART_CS_8,
+	.parity = GNSS_UART_PARITY,
+	.stop = GNSS_UART_STOP,
+	.extra = GNSS_UART_EXTRA,
+	.platform_ops = &max_uart_ops
+}; // UART 2 init param
+
+/* GPIO initialization parameters for GNSS reset */
+struct no_os_gpio_init_param gnss_reset_gpio_ip = {
+	.port = GNSS_RESET_PORT,
+	.number = GNSS_RESET_PIN,
+	.pull = NO_OS_PULL_NONE,
+	.extra = GPIO_EXTRA,
+	.platform_ops = GPIO_OPS
+};
+
+struct no_os_gpio_init_param gnss_pps_gpio_ip = {
+	.port = GNSS_PPS_IRQ_PORT,
+	.number = GNSS_PPS_IRQ_PIN,
+	.pull = NO_OS_PULL_DOWN,
+	.platform_ops = GPIO_OPS,
+	.extra = GPIO_EXTRA,
+};
+
+struct max31343_dev *rtc_desc;
+
+struct max31343_init_param rtc_init_param = {
+	.i2c_init = &rtc_i2c_ip,
+	.battery_en = 0
+};
+
+struct no_os_timer_init_param pps_timer_ip = {
+	.id           = PPS_TIMER_ID,
+	.freq_hz      = PPS_TIMER_FREQ_HZ,
+	.ticks_count  = 0xFFFFFFFF,
+	.platform_ops = TIMER_OPS,
+};
+
+struct no_os_irq_init_param gnss_pps_irq_ip = {
+	.irq_ctrl_id  = GNSS_PPS_IRQ_PORT,
+	.platform_ops = INTR_OPS,
+};
+
+struct no_os_gpio_init_param rtc_pps_gpio_ip = {
+	.port         = RTC_PPS_IRQ_PORT,
+	.number       = RTC_PPS_IRQ_PIN,
+	.pull         = NO_OS_PULL_NONE,
+	.platform_ops = GPIO_OPS,
+	.extra        = GPIO_EXTRA,
+};
+
+struct no_os_irq_init_param rtc_pps_irq_ip = {
+	.irq_ctrl_id  = RTC_PPS_IRQ_PORT,
+	.platform_ops = INTR_OPS,
+};
+
+struct no_os_irq_init_param rtc_sync_timer_nvic_ip = {
+	.platform_ops = &max_irq_ops,
+};
+#endif
+

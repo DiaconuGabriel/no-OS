@@ -112,6 +112,13 @@
 #define FLASH_STAT                      61
 #define FLASH_CAL_DATA                  62
 
+// GNSS/RTC time-sync attributes
+#ifdef PQM_TIME_SYNC
+#define TIME_MS                63
+#define PPS_DRIFT_US                    64
+#define TIME_SYNC_STATUS                65
+#endif
+
 // Channel specific attributes
 #define CHAN_RMS                        0
 #define CHAN_ANGLE                      1

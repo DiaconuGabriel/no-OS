@@ -33,6 +33,11 @@
 
 #include "iio_pqm.h"
 #include "flash_storage.h"
+#ifdef PQM_TIME_SYNC
+#include "gnss_utils.h"
+#include "pps_utils.h"
+#include "rtc_utils.h"
+#endif
 
 #define PQM_VOLTAGE_CHANNEL(_idx, _scan_idx, _name)                            \
   {                                                                            \
@@ -446,6 +451,26 @@ int read_pqm_attr(void *device, char *buf, uint32_t len,
 			return offset;
 		}
 
+#ifdef PQM_TIME_SYNC
+		case TIME_MS:
+			return snprintf(buf, len, "%lld", (long long)time_ms);
+		case PPS_DRIFT_US: {
+			int32_t drift_us = 0;
+			int ret = pps_get_drift_us(&drift_us);
+			if (ret)
+				return snprintf(buf, len, "unavailable");
+			return snprintf(buf, len, "%ld", (long)drift_us);
+		}
+		case TIME_SYNC_STATUS:
+			switch (pps_get_status()) {
+			case TIME_SYNC_GNSS_LOCKED:
+				return snprintf(buf, len, "gnss_locked");
+			case TIME_SYNC_HOLDOVER:
+				return snprintf(buf, len, "holdover");
+			default:
+				return snprintf(buf, len, "unsynced");
+			}
+#endif
 		default:
 			return snprintf(buf, len, "%.2f", desc->pqm_global_attr[attr_id]);
 		}
@@ -1485,6 +1510,24 @@ struct iio_attribute global_pqm_attributes[] = {
 		.show = read_pqm_attr,
 		.priv = FLASH_CAL_DATA,
 	},
+#ifdef PQM_TIME_SYNC
+	/* GNSS/RTC time-sync attributes (live values only) */
+	{
+		.name = "time_ms",
+		.show = read_pqm_attr,
+		.priv = TIME_MS,
+	},
+	{
+		.name = "pps_drift_us",
+		.show = read_pqm_attr,
+		.priv = PPS_DRIFT_US,
+	},
+	{
+		.name = "time_sync_status",
+		.show = read_pqm_attr,
+		.priv = TIME_SYNC_STATUS,
+	},
+#endif
 	END_ATTRIBUTES_ARRAY,
 }; // global attributes for device
 

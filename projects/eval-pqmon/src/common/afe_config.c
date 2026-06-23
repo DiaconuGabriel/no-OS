@@ -228,7 +228,13 @@ int config_afe_irq(void)
 	uint32_t config = 0;
 	status = afe_write_32bit_reg(REG_MASK0, (uint32_t *)&config);
 	if (status == 0) {
+#ifdef PQM_TIME_SYNC
+		/* Time-sync: only RMSONERDY drives IRQ0 so the PPS timestamp
+		 * capture stays jitter-free. COH_PAGE_RDY is polled in the loop. */
+		config |= BITM_MASK0_RMSONERDY;
+#else
 		config = BITM_MASK0_RMSONERDY | BITM_MASK0_COH_PAGE_RDY;
+#endif
 		status = afe_write_32bit_reg(REG_MASK0, (uint32_t *)&config);
 		if (status != 0) {
 			status = SYS_STATUS_AFE_MASK0_FAILED;

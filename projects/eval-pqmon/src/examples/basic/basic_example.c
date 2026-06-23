@@ -34,6 +34,7 @@
 #ifdef BASIC_EXAMPLE
 #include "basic_example.h"
 #endif
+#include "no_os_print_log.h"
 
 int32_t pqm_init(struct pqm_desc **desc, struct pqm_init_para *param)
 {
@@ -182,6 +183,56 @@ int basic_pqm_firmware()
 	       NETIF_MAX_HWADDR_LEN);
 #endif
 
+#ifdef PQM_TIME_SYNC
+	status = max31343_init(&rtc_desc, rtc_init_param);
+	if (status) {
+		pr_info("RTC Init failed: %d\n\r", status);
+		goto exit;
+	}
+
+	status = pps_timer_init();
+	if (status) {
+		pr_info("PPS timer init failed (%d)\n\r", status);
+		goto exit;
+	}
+
+#if PQM_GNSS_SLAVE
+	static struct gnss_dev slave_gnss_dev = {0};
+	status = gnss_pps_interrupt_init(&slave_gnss_dev);
+#else
+	status = gnss_start();
+	if (status) {
+		pr_info("GNSS Init failed\n");
+		goto exit;
+	}
+	struct nmea_ubx_gnss_extra *platform_extra = (struct nmea_ubx_gnss_extra *)
+			gnss_desc->extra;
+	status = gnss_pps_interrupt_init(platform_extra->gnss_device);
+#endif
+	if (status) {
+		pr_info("GNSS PPS interrupt init failed (%d)\n\r", status);
+		goto exit;
+	}
+
+	status = time_sync_boot();
+	if (status)
+		pr_warning("No time reference at boot (%d); timestamps start at 0\n\r",
+			   status);
+
+	/* Boot-time GNSS sync complete: continue to initialize the rest.*/
+	status = rtc_pps_interrupt_init();
+	if (status) {
+		pr_info("RTC PPS interrupt init failed (%d)\n\r", status);
+		goto exit;
+	}
+
+	status = rtc_sync_timer_init();
+	if (status) {
+		pr_info("RTC sync timer init failed (%d)\n\r", status);
+		goto exit;
+	}
+#endif
+
 	status = afe_init();
 	if (status != SYS_STATUS_SUCCESS) {
 		printf("AFE Init failed \n\r");
@@ -205,6 +256,15 @@ int basic_pqm_firmware()
 		printf("PQM could not start measurements, status: %d \n\r", status);
 		goto exit;
 	}
+
+#ifdef PQM_TIME_SYNC
+	status = rmsonerdy_interrupt_init();
+	if (status) {
+		pr_info("RMSONERDY interrupt init failed (%d)\n\r", status);
+		goto exit;
+	}
+#endif
+
 	printf("Mesurements started \n\r");
 
 	struct iio_app_device devices[] = {

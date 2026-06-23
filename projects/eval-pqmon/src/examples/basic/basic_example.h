@@ -35,6 +35,10 @@
 #define __PQM_FW_H__
 
 #include "common_data.h"
+#ifdef PQM_TIME_SYNC
+#include "gnss_utils.h"
+#include "pps_utils.h"
+#endif
 #include "no_os_error.h"
 
 /**
